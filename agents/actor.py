@@ -1,6 +1,7 @@
 """Deep Deterministec Policy Gradients (DDPG) reinforcement learning agent."""
 from keras import layers, models, optimizers
 from keras import backend as K
+from keras.regularizers import l2
 
 class Actor:
     """Actor (Policy) Model. """
@@ -27,6 +28,7 @@ class Actor:
 
     def build_model(self):
         """Build an actor (policy) network that maps states -> actions."""
+        l2_lambda = 0.001
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
 
@@ -38,7 +40,7 @@ class Actor:
         # Try different layer sizes, activations, add batch norm, regularizers, etc.
 
         # Add final output layer with sigmoid activation
-        raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
+        raw_actions = layers.Dense(units=self.action_size, activation='tanh',
             name='raw_actions')(net)
 
         # Scale [0, 1] output for each action dimension to proper range
@@ -60,5 +62,5 @@ class Actor:
             loss=loss)
         self.train_fn = K.function(
             inputs=[self.model.input, action_gradients, K.learning_phase()],
-            outputs=[],
+            outputs=[loss],
             updates=updates_op)

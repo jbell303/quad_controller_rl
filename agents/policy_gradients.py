@@ -18,12 +18,12 @@ class DDPG(BaseAgent):
         self.task = task
         self.state_size = 3 # position only
         self.state_range = self.task.observation_space.high - self.task.observation_space.low
-        self.action_size = 3 # force only
+        self.action_size = 3 # state only
         self.action_range = self.task.action_space.high - self.task.action_space.low
 
         # Actor (Policy) Model
-        self.action_low = self.task.action_space.low[0:3] 
-        self.action_high = self.task.action_space.high[0:3] 
+        self.action_low = self.task.action_space.low[0:3]
+        self.action_high = self.task.action_space.high[0:3]
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low,
             self.action_high)
         self.actor_target = Actor(self.state_size, self.action_size, self.action_low,
@@ -64,6 +64,8 @@ class DDPG(BaseAgent):
         self.last_state = None
         self.last_action = None
         self.total_reward = 0.0
+        self.actor_loss = 0.0
+        self.critic_loss = 0.0
 
     def preprocess_state(self, state):
         """Reduce sate vector to relevant dimensions"""
@@ -72,12 +74,17 @@ class DDPG(BaseAgent):
     def postprocess_action(self, action):
         """Return complete action vector."""
         complete_action = np.zeros(self.task.action_space.shape) # shape: (6,)
+        action[-1,2] = np.abs(action[-1,2])
         complete_action[0:3] = action # linear force only
         return complete_action
 
     def step(self, state, reward, done):
         # Reduce state vector
         state = self.preprocess_state(state)
+
+        # Transform state vector
+        state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
+        state = state.reshape(1, -1)  # convert to row vector
 
         # Choose an action
         action = self.act(state)
@@ -97,6 +104,8 @@ class DDPG(BaseAgent):
             # Write episode stats
             self.write_stats([self.episode_num, self.total_reward])
             self.episode_num += 1
+            print("Total reward: {0:.4f}... Actor loss: {1:.4f}... Critic loss: {2:.4f}...".format(
+                self.total_reward, self.actor_loss[0], self.critic_loss))
             self.reset_episode_vars()
 
         self.last_state = state 
@@ -128,12 +137,12 @@ class DDPG(BaseAgent):
 
         # Compute Q targets for current states and train critic model (local)
         Q_targets = rewards + self.gamma * Q_targets_next * (1 - dones)
-        self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
+        self.critic_loss = self.critic_local.model.train_on_batch(x=[states, actions], y=Q_targets)
 
         # Train actor model (local)
         action_gradients = np.reshape(self.critic_local.get_action_gradients(
             [states, actions, 0]), (-1, self.action_size))
-        self.actor_local.train_fn([states, action_gradients, 1]) # custom train fn
+        self.actor_loss = self.actor_local.train_fn([states, action_gradients, 1]) # custom train fn
 
         # Soft-update target models
         self.soft_update(self.critic_local.model, self.critic_target.model)
@@ -152,5 +161,4 @@ class DDPG(BaseAgent):
         df_stats = pd.DataFrame([stats], columns=self.stats_columns) # single-row dataframe
         df_stats.to_csv(self.stats_filename, mode='a', index=False,
             header=not os.path.isfile(self.stats_filename)) # write header first time only
-
 
