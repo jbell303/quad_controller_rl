@@ -83,8 +83,9 @@ class DDPG(BaseAgent):
         state = self.preprocess_state(state)
 
         # Transform state vector
-        state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
-        state = state.reshape(1, -1)  # convert to row vector
+        # state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
+        # state = state.reshape(1, -1)  # convert to row vector
+        # print("normalized_state: {}".format(state))
 
         # Choose an action
         action = self.act(state)
@@ -116,6 +117,7 @@ class DDPG(BaseAgent):
         """Returns actions for given state(s) as per current policy."""
         states = np.reshape(states, [-1, self.state_size])
         actions = self.actor_local.model.predict(states)
+        self.actions = actions
         return actions + self.noise.sample() # add some noise for exploration
 
     def learn(self, experiences):
@@ -142,6 +144,7 @@ class DDPG(BaseAgent):
         # Train actor model (local)
         action_gradients = np.reshape(self.critic_local.get_action_gradients(
             [states, actions, 0]), (-1, self.action_size))
+        self.action_gradients = action_gradients
         self.actor_loss = self.actor_local.train_fn([states, action_gradients, 1]) # custom train fn
 
         # Soft-update target models

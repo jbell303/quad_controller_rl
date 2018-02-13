@@ -1,6 +1,7 @@
 """Deep Deterministec Policy Gradients (DDPG) reinforcement learning agent."""
 from keras import layers, models, optimizers
 from keras import backend as K
+from keras.regularizers import l2
 
 class Critic:
     """Critic (Value) Model. """
@@ -22,17 +23,20 @@ class Critic:
 
     def build_model(self):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values"""
+        l2_lambda = 0.001
         # Define input layers
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
         # Add hidden layer(s) for state pathway
-        net_states = layers.Dense(units=32, activation='relu', kernel_initializer='glorot_uniform')(states)
-        net_states = layers.Dense(units=64, activation='relu', kernel_initializer='glorot_uniform')(net_states)
+        net_states = layers.Dense(units=32, activation='relu', kernel_initializer='glorot_uniform', kernel_regularizer=l2(l2_lambda))(states)
+        net_states = layers.Dense(units=64, activation='relu', kernel_initializer='glorot_uniform', kernel_regularizer=l2(l2_lambda))(net_states)
+        net_states = layers.BatchNormalization()(net_states)
 
         # Add hidden layer(s) for action pathway
-        net_actions = layers.Dense(units=32, activation='relu', kernel_initializer='glorot_uniform')(actions)
-        net_actions = layers.Dense(units=64, activation='relu', kernel_initializer='glorot_uniform')(net_actions)
+        net_actions = layers.Dense(units=32, activation='relu', kernel_initializer='glorot_uniform', kernel_regularizer=l2(l2_lambda))(actions)
+        net_actions = layers.Dense(units=64, activation='relu', kernel_initializer='glorot_uniform', kernel_regularizer=l2(l2_lambda))(net_actions)
+        net_actions = layers.BatchNormalization()(net_actions)
 
         # Try different layer sizes, activations, add batch norm, regularizers, etc.
 
