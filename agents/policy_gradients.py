@@ -20,10 +20,24 @@ class DDPG(BaseAgent):
         self.state_range = self.task.observation_space.high - self.task.observation_space.low
         self.action_size = 3 # state only
         self.action_range = self.task.action_space.high - self.task.action_space.low
-
-        # Actor (Policy) Model
         self.action_low = self.task.action_space.low[0:3]
         self.action_high = self.task.action_space.high[0:3]
+
+        # Load/save parameters
+        self.load_weights = True # try to load weights from previously saved models
+        self.save_weights_every = 10 # save weights every n episodes, none to disable
+        self.model_dir = util.get_param('out')
+        self.model_name = "DDPG"
+        self.model_ext = ".h5"
+        if self.load_weights or self.save_weights_every:
+            self.actor_filename = os.path.join(self.model_dir, 
+                "{}actor{}".format(self.model_name, self.model_ext))
+            self.critic_filename = os.path.join(self.model_dir,
+                "{}critic{}".format(self.model_name, self.model_ext))
+            print("Actor filename:", self.actor_filename) # [debug]
+            print("Critic filename", self.critic_filename) # [debug]
+
+        # Actor (Policy) Model
         self.actor_local = Actor(self.state_size, self.action_size, self.action_low,
             self.action_high)
         self.actor_target = Actor(self.state_size, self.action_size, self.action_low,
@@ -32,6 +46,19 @@ class DDPG(BaseAgent):
         # Critic (Value) Model
         self.critic_local = Critic(self.state_size, self.action_size)
         self.critic_target = Critic(self.state_size, self.action_size)
+
+        # Load pre-trained model weights, if avail
+        if self.load_weights and os.path.isfile(self.actor_filename):
+            try:
+                self.actor_local.model.load_weights(self.actor_filename)
+                self.critic_local.model.load_weights(self.critic_filename)
+                print("Model weights loaded from file!") # [debug]
+            except Exception as e:
+                print("Unable to load model weights from file!")
+                print("{}: {}".format(e.__class__.__name__, str(e)))
+        if self.save_weights_every:
+            print("Saving model weights", "every {} episodes".format(
+                self.save_weights_every) if self.save_weights_every else "disabled") # [debug]
 
         # Initialize target model parameters with local model parameters
         self.critic_target.model.set_weights(self.critic_local.model.get_weights())
@@ -58,9 +85,11 @@ class DDPG(BaseAgent):
         print("Saving stats {} to {}".format(self.stats_columns, self.stats_filename)) # [debug]
 
         # Episode variables
+        self.episode = 0
         self.reset_episode_vars()
 
     def reset_episode_vars(self):
+        self.episode += 1
         self.last_state = None
         self.last_action = None
         self.total_reward = 0.0
@@ -74,7 +103,7 @@ class DDPG(BaseAgent):
     def postprocess_action(self, action):
         """Return complete action vector."""
         complete_action = np.zeros(self.task.action_space.shape) # shape: (6,)
-        action[-1,2] = np.abs(action[-1,2])
+        # action[-1,2] = np.abs(action[-1,2])
         complete_action[0:3] = action # linear force only
         return complete_action
 
@@ -83,8 +112,8 @@ class DDPG(BaseAgent):
         state = self.preprocess_state(state)
 
         # Transform state vector
-        # state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
-        # state = state.reshape(1, -1)  # convert to row vector
+        state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
+        state = state.reshape(1, -1)  # convert to row vector
         # print("normalized_state: {}".format(state))
 
         # Choose an action
@@ -102,11 +131,16 @@ class DDPG(BaseAgent):
             self.learn(experiences)
 
         if done:
+            # Save model weights at regular intervals
+            if self.save_weights_every and self.episode % self.save_weights_every == 0:
+                self.actor_local.model.save_weights(self.actor_filename)
+                self.critic_local.model.save_weights(self.critic_filename)
+                print("Model weights saved at episode", self.episode) # [debug]
             # Write episode stats
             self.write_stats([self.episode_num, self.total_reward])
             self.episode_num += 1
-            print("Total reward: {0:.4f}... Actor loss: {1:.4f}... Critic loss: {2:.4f}...".format(
-                self.total_reward, self.actor_loss[0], self.critic_loss))
+            print("Total reward: {}... Actor loss: {}... Critic loss: {}...".format(
+                self.total_reward, self.actor_loss, self.critic_loss))
             self.reset_episode_vars()
 
         self.last_state = state 
