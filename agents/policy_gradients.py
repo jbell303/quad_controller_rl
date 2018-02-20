@@ -16,12 +16,14 @@ class DDPG(BaseAgent):
 
         # Initialize environment variables
         self.task = task
-        self.state_size = 3 # position only
-        self.state_range = self.task.observation_space.high - self.task.observation_space.low
-        self.action_size = 3 # state only
-        self.action_range = self.task.action_space.high - self.task.action_space.low
-        self.action_low = self.task.action_space.low[0:3]
-        self.action_high = self.task.action_space.high[0:3]
+        self.state_size = 2
+        self.state_low = np.array([self.task.observation_space.low[2], self.task.observation_space.low[9]])
+        self.state_high = np.array([self.task.observation_space.high[2], self.task.observation_space.high[9]])
+        self.state_range = self.state_high - self.state_low
+        self.action_size = 1 # z-axis only
+        self.action_low = self.task.action_space.low[2]
+        self.action_high = self.task.action_space.high[2]
+        self.action_range = self.action_high - self.action_low
 
         # Load/save parameters
         self.load_weights = True # try to load weights from previously saved models
@@ -98,13 +100,13 @@ class DDPG(BaseAgent):
 
     def preprocess_state(self, state):
         """Reduce sate vector to relevant dimensions"""
-        return state[0:3] # position only
+        return np.array([state[2], state[9]]) # position and velocity
 
     def postprocess_action(self, action):
         """Return complete action vector."""
         complete_action = np.zeros(self.task.action_space.shape) # shape: (6,)
         # action[-1,2] = np.abs(action[-1,2])
-        complete_action[0:3] = action # linear force only
+        complete_action[2] = action # linear force only
         return complete_action
 
     def step(self, state, reward, done):
@@ -112,7 +114,7 @@ class DDPG(BaseAgent):
         state = self.preprocess_state(state)
 
         # Transform state vector
-        state = (state - self.task.observation_space.low[0:3]) / (self.task.observation_space.high[0:3] - self.task.observation_space.low[0:3])  # scale to [0.0, 1.0]
+        state = (state - self.state_low) / self.state_range  # scale to [0.0, 1.0]
         state = state.reshape(1, -1)  # convert to row vector
         # print("normalized_state: {}".format(state))
 
