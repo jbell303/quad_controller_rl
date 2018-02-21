@@ -31,9 +31,10 @@ class Actor:
         l2_lambda = 0.001
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
+        states_bn = layers.BatchNormalization()(states)
 
         # Add hidden layers
-        net = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(states)
+        net = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(states_bn)
         net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
         net = layers.Dense(units=8, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(net)

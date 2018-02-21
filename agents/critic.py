@@ -26,10 +26,11 @@ class Critic:
         l2_lambda = 0.001
         # Define input layers
         states = layers.Input(shape=(self.state_size,), name='states')
+        states_bn = layers.BatchNormalization()(states)
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
         # Add hidden layer(s) for state pathway
-        net_states = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(states)
+        net_states = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(states_bn)
         net_states = layers.BatchNormalization()(net_states)
         net_states = layers.Activation('relu')(net_states)
         net_states = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(net_states)
