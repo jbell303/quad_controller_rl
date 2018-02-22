@@ -25,9 +25,9 @@ class Landing(BaseTask):
         #print("Takeoff(): action_space = {}".format(self.action_space))  # [debug]
 
         # Task-specific parameters
-        self.max_duration = 5.0  # secs
+        self.max_duration = 10.0  # secs
         self.max_error_position = 15.0 # distance units
-        self.target_position = np.array([0.0, 0.0, 0.0]) # target position to land
+        self.target_position = np.array([0.0, 0.0, 0.1]) # target position to land
         self.weight_position = 0.5
         self.target_orientation = np.array([0.0, 0.0, 0.0, 1.0]) # target orientation (upright)
         self.weight_orientation = 0.2
@@ -62,7 +62,7 @@ class Landing(BaseTask):
         self.last_position = position
         # print("angular_velocity: {}, linear_acceleration: {}".format(angular_velocity, linear_acceleration))
 
-        error_position = np.linalg.norm(self.target_position - state[0:3]) # Euclidian distance from target position vector
+        error_position = np.log(np.linalg.norm(self.target_position - state[0:3])) # Euclidian distance from target position vector
         # error_orientation = np.linalg.norm(self.target_orientation - state[3:7]) #Euclidian distance from target orientation quaternion
         error_orientation = 0 # factor out orientation
         error_velocity = np.linalg.norm(self.target_velocity - state[7:10])**2
@@ -74,7 +74,10 @@ class Landing(BaseTask):
             reward -= 50.0  # extra penalty, agent strayed too far
             done = True
         elif timestamp > self.max_duration:  # agent has run out of time
-            reward += 50.0  # extra reward, agent made it to the end
+            reward -= 10.0  # extra penalty, agent was too slow
+            done = True
+        elif pose.position.z <= self.target_position[2]: # agent landed
+            reward += 50.0 # extra reward, agent landed
             done = True
 
         # Take one RL step, passing in current state and reward, and obtain action
