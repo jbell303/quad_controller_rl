@@ -107,6 +107,7 @@ class DDPG(BaseAgent):
         complete_action = np.zeros(self.task.action_space.shape) # shape: (6,)
         # action[-1,2] = np.abs(action[-1,2])
         complete_action[2] = action # linear force only
+        print(complete_action)
         return complete_action
 
     def step(self, state, reward, done):
