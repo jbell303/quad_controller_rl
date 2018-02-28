@@ -77,6 +77,7 @@ class Hover(BaseTask):
         elif timestamp > self.max_duration:  # agent has run out of time
             reward += 50.0  # extra reward, agent made it to the end
             done = True
+            print("postition: {}...".format(pose.position.z))
 
         # Take one RL step, passing in current state and reward, and obtain action
         # Note: The reward passed in here is the result of past action(s)

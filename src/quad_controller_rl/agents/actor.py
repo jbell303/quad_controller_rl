@@ -35,12 +35,15 @@ class Actor:
 
         # Add hidden layers
         net = layers.Dense(units=4, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(states_bn)
+        net = layers.Dropout(0.1)(net)
         net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
         net = layers.Dense(units=8, activation=None, kernel_initializer='he_uniform', kernel_regularizer=l2(l2_lambda))(net)
+        net = layers.Dropout(0.1)(net)
         net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
         net = layers.Dense(units=8, activation=None, kernel_initializer='glorot_normal', kernel_regularizer=l2(l2_lambda))(net)
+        net = layers.Dropout(0.1)(net)
         net = layers.BatchNormalization()(net)
         net = layers.Activation('relu')(net)
 

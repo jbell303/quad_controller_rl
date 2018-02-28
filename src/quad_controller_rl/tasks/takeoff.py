@@ -62,15 +62,15 @@ class Takeoff(BaseTask):
         # Compute reward / penalty and check if this episode is complete
         done = False
         error_position = abs(self.target_z - pose.position.z)
-        error_velocity = self.target_velocity_z - state[9]**2
-        print("Velocity: {}".format(state[9]))
-        reward = -max((self.weight_position * error_position + self.weight_velocity * error_velocity), 20.0) # reward = zero for matching target z, -ve as you go farther, upto -20
+        error_velocity = (self.target_velocity_z - state[9])**2
+        reward = -min(self.weight_position * error_position + self.weight_velocity * error_velocity, 20.0) # reward = zero for matching target z, -ve as you go farther, upto -20
         if pose.position.z >= self.target_z:  # agent has crossed the target height
             reward += 10.0  # bonus reward
             done = True
         elif timestamp > self.max_duration:  # agent has run out of time
             reward -= 10.0  # extra penalty
             done = True
+            print("Last action: {}...".format(self.action))
 
         # Take one RL step, passing in current state and reward, and obtain action
         # Note: The reward passed in here is the result of past action(s)
@@ -79,7 +79,7 @@ class Takeoff(BaseTask):
         # Convert to proper force command (a Wrench object) and return it
         if action is not None:
             action = np.clip(action.flatten(), self.action_space.low, self.action_space.high)  # flatten, clamp to action space limits
-            print ("z_Force: {}".format(action[2]))
+            self.action = action[2]
             return Wrench(
                     force=Vector3(action[0], action[1], action[2]),
                     torque=Vector3(action[3], action[4], action[5])
