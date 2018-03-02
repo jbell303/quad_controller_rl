@@ -28,11 +28,11 @@ class Hover(BaseTask):
         self.max_duration = 5.0  # secs
         self.max_error_position = 8.0 # distance units
         self.target_position = np.array([0.0, 0.0, 10.0]) # target position to hover at
-        self.weight_position = 0.5
+        self.weight_position = 0.3
         self.target_orientation = np.array([0.0, 0.0, 0.0, 1.0]) # target orientation (upright)
         self.weight_orientation = 0.2
         self.target_velocity = np.array([0.0, 0.0, 0.0]) # target velocity (ideally stary in place)
-        self.weight_velocity = 0.3
+        self.weight_velocity = 0.2
 
     def reset(self):
         # Reset episode-specific variables
